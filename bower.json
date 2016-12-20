@@ -1,0 +1,9 @@
+{
+  "name": "baidahocpas_tools",
+  "version": "0.0.1",
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "js-xlsx": "^0.8.0"
+  },
+  "private": true
+}
