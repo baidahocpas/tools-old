@@ -21,13 +21,80 @@
 <!--     <script src="js/jszip.js"></script> -->
 <!--     <script src="js/ods.js"></script> -->
 <!--     <script src="js/shim.js"></script> -->
-    <script src="js/xlsx.js"></script>
+<!--     <script src="js/xlsx.js"></script> -->
 <!--     <script src="js/xlsxworker.js"></script> -->
 <!--     <script src="js/xlsxworker1.js"></script> -->
 <!--     <script src="js/xlsxworker2.js"></script> -->
     
     <!-- File input handling -->
     <script>
+      var months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      
+      var products = [
+        "tank",
+        "sock",
+        "water",
+        "serenity",
+        "pant",
+        "capri",
+        "bracelet",
+        "camo",
+        "sweater",
+        "pant",
+        "hanky",
+        "cape",
+        "pacific",
+        "moto",
+        "legging",
+        "printed",
+        "bra",
+        "love is",
+        "tunic",
+        "wbv",
+        "warmer",
+        "glimpse",
+        "nest",
+        "featherweight",
+      ];
+      
+      function xl2jsDate(date) {
+        // TODO: should be 25569 but the UTC/local difference screws it up...
+        var jsdate = new Date(Math.round((date - 25568)*86400*1000));
+                
+        var day = jsdate.getDate();
+        var monthIndex = jsdate.getMonth();
+        
+        return day + " " + months[monthIndex];
+      }
+      
+      function parseSalesData(sales) {
+        sales = sales["Sales"];
+        parsedSales = {};
+        
+        for (var i = 0; i < sales.length; i++) {
+          var saleDate = xl2jsDate(sales[i]["Sale Date"]);
+          parsedSales[saleDate] = {};
+          
+          parsedSales[saleDate]["Classes"] = sales[i]["Client"];
+        }
+        
+        console.log(parsedSales);
+        return parsedSales;
+      }
+      
       var X = XLSX;
       var XW = {
         /* worker message */
@@ -140,7 +207,8 @@
         var output = "";
         //output = JSON.stringify(to_json(wb), 2, 2);
         output = to_json(wb);
-        console.log(output["Sales"][0]);
+        
+        output = parseSalesData(output);
         
         if(out.innerText === undefined) out.textContent = output;
         else out.innerText = output;
