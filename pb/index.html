@@ -45,9 +45,11 @@
       // Input Names
       // These should match the names in the workbook that was downloaded from
       // mindbodyonline.com.
+      var inDepositsSheetName = "Deposits";
       var inSalesSheetName = "Sales";
       var inSaleDate = "Sale Date";
       var inItemName = "Item name";
+      var inTotal = "Item Total";
       var inTotalPaidWPaymentMethod = "Total Paid w/ Payment Method";
       var inPaymentMethod = "Payment Method";
       var inTax = "Tax";
@@ -57,6 +59,7 @@
       // These are the names of the object that holds the results.
       var outCashSales = "Cash Sales";
       var outCreditSales = "Credit Sales";
+      var outDeposits = "Deposits";
       var outC = "Classes";
       var outCd = "Class Discounts";
       var outP = "Products";
@@ -115,6 +118,13 @@
         "pullover",
         "sleeve",
         "towel",
+        "cuff",
+        "low rise",
+        "cardigan",
+        "racer",
+        "muscle",
+        "scallop",
+        "tee",
       ];
       
       // Food Products
@@ -144,11 +154,13 @@
       // parseSalesData
       // Takes a json object and parses each entry. Output sorted by date,
       // payment method, and sale type.
-      function parseSalesData(sales) {
-        sales = sales[inSalesSheetName];
+      function parseSalesData(wb) {
+        var deposits = wb[inDepositsSheetName];
+        var sales = wb[inSalesSheetName];
         parsedSales = {};
         
-        // Iterate through transactions (corresponds to rows in excel workbook)
+        // Iterate through sales transactions (corresponds to rows in excel 
+        // workbook, sheet "Sales")
         for (var i = 0; i < sales.length; i++) {
           // Save the relevant info from each transaction
           var saleTotalPaidWPaymentMethod = parseFloat(sales[i][inTotalPaidWPaymentMethod]);
@@ -267,6 +279,23 @@
             // Save total for comparison with bank deposits
             parsedSales[saleDate][outCreditSales][outTotal] += saleTotalPaidWPaymentMethod;
           }
+        }
+        
+        // Iterate through deposit transactions (corresponds to rows in excel 
+        // workbook, sheet "Deposits")
+        for (var i = 0; i < deposits.length; i++) {
+          var depDate = xl2jsDate(deposits[i][inSaleDate]);
+          var depTotal = parseFloat(deposits[i][inTotal]);
+          
+          if (
+            typeof parsedSales[depDate][outDeposits] == "undefined"
+            || (Object.keys(parsedSales[depDate][outDeposits]).length === 0 && parsedSales[depDate][outDeposits].constructor === Object)
+          ) {
+            parsedSales[depDate][outDeposits] = {};
+            parsedSales[depDate][outDeposits][outTotal] = 0.0;
+          }
+          
+          parsedSales[depDate][outDeposits][outTotal] += depTotal;
         }
         
         console.log(parsedSales);
