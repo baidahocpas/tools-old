@@ -1,0 +1,444 @@
+<!doctype html>
+<html>
+  <head>
+    <title>BACPAS Tools | PureBarre</title>
+    
+    <link rel="stylesheet" href="../bower_components/bootstrap/dist/css/bootstrap.min.css">
+  </head>
+  <body>
+    <div class="container">
+      <h1>
+        Tools | Pure Barre
+      </h1>
+      
+      <h4>
+        Sales Reporting
+      </h4>
+      
+      <p>
+        Download a sales report, cash basis, for any number of days. Upload
+        here. Refresh to start again.
+      </p>
+      
+      <br>
+      <input id="xlf" class="form-control" type="file">
+      <br>
+      <pre id="out"></pre>
+    </div>
+    
+    <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="../bower_components/js-xlsx/dist/xlsx.core.min.js"></script>
+    
+<!--     <script src="js/jszip.js"></script> -->
+<!--     <script src="js/ods.js"></script> -->
+<!--     <script src="js/shim.js"></script> -->
+<!--     <script src="js/xlsx.js"></script> -->
+<!--     <script src="js/xlsxworker.js"></script> -->
+<!--     <script src="js/xlsxworker1.js"></script> -->
+<!--     <script src="js/xlsxworker2.js"></script> -->
+    
+    <!-- File input handling -->
+    <script>
+      // SETTINGS
+      
+      // Input Names
+      // These should match the names in the workbook that was downloaded from
+      // mindbodyonline.com.
+      var inSalesSheetName = "Sales";
+      var inSaleDate = "Sale Date";
+      var inItemName = "Item name";
+      var inTotalPaidWPaymentMethod = "Total Paid w/ Payment Method";
+      var inPaymentMethod = "Payment Method";
+      var inTax = "Tax";
+      var inDiscountAmount = "Discount amount";
+      
+      // Output Names
+      // These are the names of the object that holds the results.
+      var outCashSales = "Cash Sales";
+      var outCreditSales = "Credit Sales";
+      var outC = "Classes";
+      var outCd = "Class Discounts";
+      var outP = "Products";
+      var outPd = "Product Discounts";
+      var outFp = "Food Products";
+      var outFpt = "Food Tax (included in 'Tax')";
+      var outGc = "Gift Cards";
+      var outTax = "Tax";
+      var outTotal = "Total";
+      
+      // Months of the year, will show up in output
+      var months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      
+      // Products
+      // This is a list of words that are associated with "products" that are
+      // sold. These should be unique to products so the application doesn't
+      // assign a product to another sales category.
+      var products = [
+        "tank",
+        "sock",
+        "serenity",
+        "pant",
+        "capri",
+        "bracelet",
+        "camo",
+        "sweater",
+        "pant",
+        "hanky",
+        "cape",
+        "pacific",
+        "moto",
+        "legging",
+        "printed",
+        "bra",
+        "love is",
+        "tunic",
+        "wbv",
+        "warmer",
+        "glimpse",
+        "nest",
+        "featherweight",
+        "sleveless",
+        "pullover",
+        "sleeve",
+        "towel",
+      ];
+      
+      // Food Products
+      // Same as products.
+      var foodProducts = [
+        "water",
+      ];
+      
+      // Gift Cards
+      // Same as products.
+      var giftCards = [
+        "card",
+      ];
+      
+      // xl2jsDate
+      // Changes a Microsoft Excel date to the correct date format in MST.
+      function xl2jsDate(date) {
+        // TODO: should be 25569 but the UTC/local difference screws it up...
+        var jsdate = new Date(Math.round((date - 25568)*86400*1000));
+                
+        var day = jsdate.getDate();
+        var monthIndex = jsdate.getMonth();
+        
+        return day + " " + months[monthIndex];
+      }
+      
+      // parseSalesData
+      // Takes a json object and parses each entry. Output sorted by date,
+      // payment method, and sale type.
+      function parseSalesData(sales) {
+        sales = sales[inSalesSheetName];
+        parsedSales = {};
+        
+        // Iterate through transactions (corresponds to rows in excel workbook)
+        for (var i = 0; i < sales.length; i++) {
+          // Save the relevant info from each transaction
+          var saleTotalPaidWPaymentMethod = parseFloat(sales[i][inTotalPaidWPaymentMethod]);
+          var saleTax = parseFloat(sales[i][inTax]);
+          var saleDiscountAmount = parseFloat(sales[i][inDiscountAmount]);
+          var saleGross = saleTotalPaidWPaymentMethod - saleTax + saleDiscountAmount;
+          var saleDate = xl2jsDate(sales[i][inSaleDate]);
+          
+          // Create the object in the output that corresponds to the date of
+          // the transaction
+          if (parsedSales[saleDate] == null) {
+            parsedSales[saleDate] = {};
+          }
+          
+          // If the payment method was cash
+          if (sales[i][inPaymentMethod] == "Cash") {
+            // Cash Sales
+            
+            // If a "Cash Sales" object does not exist in the current date of
+            // sales, create it.
+            if (
+              typeof parsedSales[saleDate][outCashSales] == "undefined" 
+              || (Object.keys(parsedSales[saleDate][outCashSales]).length === 0 && parsedSales[saleDate][outCashSales].constructor === Object)
+            ) {
+              parsedSales[saleDate][outCashSales] = {};
+              parsedSales[saleDate][outCashSales][outC] = 0.0;
+              parsedSales[saleDate][outCashSales][outCd] = 0.0;
+              parsedSales[saleDate][outCashSales][outP] = 0.0;
+              parsedSales[saleDate][outCashSales][outPd] = 0.0;
+              parsedSales[saleDate][outCashSales][outFp] = 0.0;
+              parsedSales[saleDate][outCashSales][outFpt] = 0.0;
+              parsedSales[saleDate][outCashSales][outGc] = 0.0;
+              parsedSales[saleDate][outCashSales][outTax] = 0.0;
+              parsedSales[saleDate][outCashSales][outTotal] = 0.0;
+            }
+            
+            // Compare sale item to product/food product/gift card arrays to
+            // categorize the transaction
+            var isProduct = false;
+            var isFoodProduct = false;
+            var isGiftCard = false;
+            
+            if (new RegExp(products.join("|")).test(sales[i][inItemName].toLowerCase())) isProduct = true;
+            else if (new RegExp(foodProducts.join("|")).test(sales[i][inItemName].toLowerCase())) isFoodProduct = true;
+            else if (new RegExp(giftCards.join("|")).test(sales[i][inItemName].toLowerCase())) isGiftCard = true;
+            
+            // Add transaction amounts to output according to the type of sale
+            // item
+            if (isProduct) {
+              parsedSales[saleDate][outCashSales][outP] += saleGross;
+              parsedSales[saleDate][outCashSales][outPd] -= saleDiscountAmount;
+              parsedSales[saleDate][outCashSales][outTax] += saleTax;
+            } else if (isFoodProduct) {
+              parsedSales[saleDate][outCashSales][outFp] += saleGross;
+              parsedSales[saleDate][outCashSales][outFpt] += saleTax;
+              parsedSales[saleDate][outCashSales][outTax] += saleTax;
+            } else if (isGiftCard) {
+              parsedSales[saleDate][outCashSales][outGc] += saleGross;
+            } else {
+              parsedSales[saleDate][outCashSales][outC] += saleGross;
+              parsedSales[saleDate][outCashSales][outCd] -= saleDiscountAmount;
+              parsedSales[saleDate][outCashSales][outTax] += saleTax;
+            }
+            
+            // Save total for comparison with bank deposits
+            parsedSales[saleDate][outCashSales][outTotal] += saleTotalPaidWPaymentMethod;
+          } else {
+            // Credit Sales
+            
+            // If a "Credit Sales" object does not exist in the current date of
+            // sales, create it.
+            if (
+              typeof parsedSales[saleDate][outCreditSales] == "undefined"
+              || (Object.keys(parsedSales[saleDate][outCreditSales]).length === 0 && parsedSales[saleDate][outCreditSales].constructor === Object)
+            ) {
+              parsedSales[saleDate][outCreditSales] = {};
+              parsedSales[saleDate][outCreditSales][outC] = 0.0;
+              parsedSales[saleDate][outCreditSales][outCd] = 0.0;
+              parsedSales[saleDate][outCreditSales][outP] = 0.0;
+              parsedSales[saleDate][outCreditSales][outPd] = 0.0;
+              parsedSales[saleDate][outCreditSales][outFp] = 0.0;
+              parsedSales[saleDate][outCreditSales][outFpt] = 0.0;
+              parsedSales[saleDate][outCreditSales][outGc] = 0.0;
+              parsedSales[saleDate][outCreditSales][outTax] = 0.0;
+              parsedSales[saleDate][outCreditSales][outTotal] = 0.0;
+            }
+            
+            // Compare sale item to product/food product/gift card arrays to
+            // categorize the transaction
+            var isProduct = false;
+            var isFoodProduct = false;
+            var isGiftCard = false;
+
+            if (new RegExp(products.join("|")).test(sales[i][inItemName].toLowerCase())) isProduct = true;
+            else if (new RegExp(foodProducts.join("|")).test(sales[i][inItemName].toLowerCase())) isFoodProduct = true;
+            else if (new RegExp(giftCards.join("|")).test(sales[i][inItemName].toLowerCase())) isGiftCard = true;
+            
+            // Add transaction amounts to output according to the type of sale
+            // item
+            if (isProduct) {
+              parsedSales[saleDate][outCreditSales][outP] += saleGross;
+              parsedSales[saleDate][outCreditSales][outPd] -= saleDiscountAmount;
+              parsedSales[saleDate][outCreditSales][outTax] += saleTax;
+            } else if (isFoodProduct) {
+              parsedSales[saleDate][outCreditSales][outFp] += saleGross;
+              parsedSales[saleDate][outCreditSales][outFpt] += saleTax;
+              parsedSales[saleDate][outCreditSales][outTax] += saleTax;
+            } else if (isGiftCard) {
+              parsedSales[saleDate][outCreditSales][outGc] += saleGross;
+            } else {
+              parsedSales[saleDate][outCreditSales][outC] += saleGross;
+              parsedSales[saleDate][outCreditSales][outCd] -= saleDiscountAmount;
+              parsedSales[saleDate][outCreditSales][outTax] += saleTax;
+            }
+            
+            // Save total for comparison with bank deposits
+            parsedSales[saleDate][outCreditSales][outTotal] += saleTotalPaidWPaymentMethod;
+          }
+        }
+        
+        console.log(parsedSales);
+        return parsedSales;
+      }
+      
+      var X = XLSX;
+      var XW = {
+        /* worker message */
+        msg: 'xlsx',
+        /* worker scripts */
+        rABS: './js/xlsxworker2.js',
+        norABS: './js/xlsxworker1.js',
+        noxfer: './js/xlsxworker.js'
+      };
+      
+      var rABS = typeof FileReader !== "undefined" && typeof FileReader.prototype !== "undefined" && typeof FileReader.prototype.readAsBinaryString !== "undefined";
+      var use_worker = typeof Worker !== 'undefined';
+      var transferable = use_worker;
+      var wtf_mode = false;
+
+      function fixdata(data) {
+        var o = "", l = 0, w = 10240;
+        for(; l<data.byteLength/w; ++l) o+=String.fromCharCode.apply(null,new Uint8Array(data.slice(l*w,l*w+w)));
+        o+=String.fromCharCode.apply(null, new Uint8Array(data.slice(l*w)));
+        return o;
+      }
+
+      function ab2str(data) {
+        var o = "", l = 0, w = 10240;
+        for(; l<data.byteLength/w; ++l) o+=String.fromCharCode.apply(null,new Uint16Array(data.slice(l*w,l*w+w)));
+        o+=String.fromCharCode.apply(null, new Uint16Array(data.slice(l*w)));
+        return o;
+      }
+
+      function s2ab(s) {
+        var b = new ArrayBuffer(s.length*2), v = new Uint16Array(b);
+        for (var i=0; i != s.length; ++i) v[i] = s.charCodeAt(i);
+        return [v, b];
+      }
+
+      function xw_noxfer(data, cb) {
+        var worker = new Worker(XW.noxfer);
+        worker.onmessage = function(e) {
+          switch(e.data.t) {
+            case 'ready': break;
+            case 'e': console.error(e.data.d); break;
+            case XW.msg: cb(JSON.parse(e.data.d)); break;
+          }
+        };
+        var arr = rABS ? data : btoa(fixdata(data));
+        worker.postMessage({d:arr,b:rABS});
+      }
+
+      function xw_xfer(data, cb) {
+        var worker = new Worker(rABS ? XW.rABS : XW.norABS);
+        worker.onmessage = function(e) {
+          switch(e.data.t) {
+            case 'ready': break;
+            case 'e': console.error(e.data.d); break;
+            default: xx=ab2str(e.data).replace(/\n/g,"\\n").replace(/\r/g,"\\r"); console.log("done"); cb(JSON.parse(xx)); break;
+          }
+        };
+        if(rABS) {
+          var val = s2ab(data);
+          worker.postMessage(val[1], [val[1]]);
+        } else {
+          worker.postMessage(data, [data]);
+        }
+      }
+
+      function xw(data, cb) {
+        transferable = true;
+        if(transferable) xw_xfer(data, cb);
+        else xw_noxfer(data, cb);
+      }
+
+      function to_json(workbook) {
+        var result = {};
+        workbook.SheetNames.forEach(function(sheetName) {
+          var roa = X.utils.sheet_to_row_object_array(workbook.Sheets[sheetName]);
+          if(roa.length > 0){
+            result[sheetName] = roa;
+          }
+        });
+        return result;
+      }
+
+      function to_csv(workbook) {
+        var result = [];
+        workbook.SheetNames.forEach(function(sheetName) {
+          var csv = X.utils.sheet_to_csv(workbook.Sheets[sheetName]);
+          if(csv.length > 0){
+            result.push("SHEET: " + sheetName);
+            result.push("");
+            result.push(csv);
+          }
+        });
+        return result.join("\n");
+      }
+
+      function to_formulae(workbook) {
+        var result = [];
+        workbook.SheetNames.forEach(function(sheetName) {
+          var formulae = X.utils.get_formulae(workbook.Sheets[sheetName]);
+          if(formulae.length > 0){
+            result.push("SHEET: " + sheetName);
+            result.push("");
+            result.push(formulae.join("\n"));
+          }
+        });
+        return result.join("\n");
+      }
+      
+      function prettify(jsonData) {
+        var output = jsonData;
+        console.log('prettifying');
+        
+        for (var date in output) {
+          console.log(date);
+          console.log(output[date]);
+          
+        }
+        
+        return JSON.stringify(output, null, 2);
+      }
+      
+      function process_wb(wb) {
+        var output = "";
+        //output = JSON.stringify(to_json(wb), 2, 2);
+        output = to_json(wb);
+        
+        output = parseSalesData(output);
+        
+        output = prettify(output);
+        
+        if(out.innerText === undefined) out.textContent = output;
+        else out.innerText = output;
+        if(typeof console !== 'undefined') console.log("output", new Date());
+      }
+      
+      var xlf = document.getElementById('xlf');
+      function handleFile(e) {
+        rABS = true;
+        use_worker = true;
+        var files = e.target.files;
+        var f = files[0];
+        {
+          var reader = new FileReader();
+          var name = f.name;
+          reader.onload = function(e) {
+            if(typeof console !== 'undefined') console.log("onload", new Date(), rABS, use_worker);
+            var data = e.target.result;
+            if(use_worker) {
+              xw(data, process_wb);
+            } else {
+              var wb;
+              if(rABS) {
+                wb = X.read(data, {type: 'binary'});
+              } else {
+              var arr = fixdata(data);
+                wb = X.read(btoa(arr), {type: 'base64'});
+              }
+              process_wb(wb);
+            }
+          };
+          if(rABS) reader.readAsBinaryString(f);
+          else reader.readAsArrayBuffer(f);
+        }
+      }
+
+      if(xlf.addEventListener) xlf.addEventListener('change', handleFile, false);
+    </script>
+  </body>
+</html>
