@@ -49,7 +49,7 @@
       var inSalesSheetName = "Sales";
       var inSaleDate = "Sale Date";
       var inItemName = "Item name";
-      var inTotal = "Item Total";
+      var inItemTotal = "Item Total";
       var inTotalPaidWPaymentMethod = "Total Paid w/ Payment Method";
       var inPaymentMethod = "Payment Method";
       var inTax = "Tax";
@@ -59,7 +59,7 @@
       // These are the names of the object that holds the results.
       var outCashSales = "Cash Sales";
       var outCreditSales = "Credit Sales";
-      var outDeposits = "Deposits";
+      var outDeposits = "Deposits (included in revenue totals)";
       var outC = "Classes";
       var outCd = "Class Discounts";
       var outP = "Products";
@@ -91,40 +91,60 @@
       // sold. These should be unique to products so the application doesn't
       // assign a product to another sales category.
       var products = [
-        "tank",
-        "sock",
-        "serenity",
-        "pant",
-        "capri",
-        "bracelet",
-        "camo",
-        "sweater",
-        "pant",
-        "hanky",
-        "cape",
-        "pacific",
-        "moto",
-        "legging",
-        "printed",
+        "account",
+        "bailey",
         "bra",
-        "love is",
-        "tunic",
-        "wbv",
-        "warmer",
-        "glimpse",
-        "nest",
-        "featherweight",
-        "sleveless",
-        "pullover",
-        "sleeve",
-        "towel",
-        "cuff",
-        "low rise",
+        "bottle",
+        "bourbon",
+        "bracelet",
+        "cami",
+        "camo",
+        "cape",
+        "capri",
         "cardigan",
-        "racer",
+        "choker",
+        "cowl",
+        "cuff",
+        "evergreen",
+        "featherweight",
+        "fraser",
+        "glimpse",
+        "hanky",
+        "hat",
+        "hoodie",
+        "legging",
+        "love is",
+        "low rise",
+        "manning",
+        "moto",
         "muscle",
+        "necklace",
+        "nest",
+        "pacific",
+        "pant",
+        "printed",
+        "pullover",
+        "racer",
+        "seedling",
+        "serenity",
+        "shirt",
         "scallop",
+        "see you at the barre",
+        "sleeve",
+        "sleveless",
+        "sock",
+        "strappy",
+        "sweater",
+        "tank",
         "tee",
+        "tight",
+        "towel",
+        "tunic",
+        "vest",
+        "warmer",
+        "wbv",
+        "wellworth",
+        "work hard play harder",
       ];
       
       // Food Products
@@ -137,6 +157,7 @@
       // Same as products.
       var giftCards = [
         "card",
+        "certificate",
       ];
       
       // xl2jsDate
@@ -193,6 +214,7 @@
               parsedSales[saleDate][outCashSales][outFp] = 0.0;
               parsedSales[saleDate][outCashSales][outFpt] = 0.0;
               parsedSales[saleDate][outCashSales][outGc] = 0.0;
+              parsedSales[saleDate][outCashSales][outDeposits] = 0.0;
               parsedSales[saleDate][outCashSales][outTax] = 0.0;
               parsedSales[saleDate][outCashSales][outTotal] = 0.0;
             }
@@ -203,8 +225,9 @@
             var isFoodProduct = false;
             var isGiftCard = false;
             
-            if (new RegExp(products.join("|")).test(sales[i][inItemName].toLowerCase())) isProduct = true;
-            else if (new RegExp(foodProducts.join("|")).test(sales[i][inItemName].toLowerCase())) isFoodProduct = true;
+            //if (new RegExp(products.join("|")).test(sales[i][inItemName].toLowerCase())) isProduct = true;
+            if (new RegExp(foodProducts.join("|")).test(sales[i][inItemName].toLowerCase())) isFoodProduct = true;
+            if (sales[i][inTax] > 0) isProduct = true;
             else if (new RegExp(giftCards.join("|")).test(sales[i][inItemName].toLowerCase())) isGiftCard = true;
             
             // Add transaction amounts to output according to the type of sale
@@ -244,6 +267,133 @@
               parsedSales[saleDate][outCreditSales][outFp] = 0.0;
               parsedSales[saleDate][outCreditSales][outFpt] = 0.0;
               parsedSales[saleDate][outCreditSales][outGc] = 0.0;
+              parsedSales[saleDate][outCreditSales][outDeposits] = 0.0;
+              parsedSales[saleDate][outCreditSales][outTax] = 0.0;
+              parsedSales[saleDate][outCreditSales][outTotal] = 0.0;
+            }
+            
+            // Compare sale item to product/food product/gift card arrays to
+            // categorize the transaction
+            var isProduct = false;
+            var isFoodProduct = false;
+            var isGiftCard = false;
+
+            //if (new RegExp(products.join("|")).test(sales[i][inItemName].toLowerCase())) isProduct = true;
+            if (new RegExp(foodProducts.join("|")).test(sales[i][inItemName].toLowerCase())) isFoodProduct = true;
+            if (sales[i][inTax] > 0) isProduct = true;
+            else if (new RegExp(giftCards.join("|")).test(sales[i][inItemName].toLowerCase())) isGiftCard = true;
+            
+            // Add transaction amounts to output according to the type of sale
+            // item
+            if (isProduct) {
+              parsedSales[saleDate][outCreditSales][outP] += saleGross;
+              parsedSales[saleDate][outCreditSales][outPd] -= saleDiscountAmount;
+              parsedSales[saleDate][outCreditSales][outTax] += saleTax;
+            } else if (isFoodProduct) {
+              parsedSales[saleDate][outCreditSales][outFp] += saleGross;
+              parsedSales[saleDate][outCreditSales][outFpt] += saleTax;
+              parsedSales[saleDate][outCreditSales][outTax] += saleTax;
+            } else if (isGiftCard) {
+              parsedSales[saleDate][outCreditSales][outGc] += saleGross;
+            } else {
+              parsedSales[saleDate][outCreditSales][outC] += saleGross;
+              parsedSales[saleDate][outCreditSales][outCd] -= saleDiscountAmount;
+              parsedSales[saleDate][outCreditSales][outTax] += saleTax;
+            }
+            
+            // Save total for comparison with bank deposits
+            parsedSales[saleDate][outCreditSales][outTotal] += saleTotalPaidWPaymentMethod;
+          }
+        }
+        
+        // Iterate through deposit transactions (corresponds to rows in excel 
+        // workbook, sheet "Deposits")
+        /*for (var i = 0; i < deposits.length; i++) {
+          // Save the relevant info from each transaction
+          var saleTotal = parseFloat(deposits[i][inItemTotal]);
+          var saleTax = parseFloat(deposits[i][inTax]);
+          var saleDiscountAmount = parseFloat(deposits[i][inDiscountAmount]);
+          var saleGross = saleTotal - saleTax + saleDiscountAmount;
+          var saleDate = xl2jsDate(deposits[i][inSaleDate]);
+          
+          // Create the object in the output that corresponds to the date of
+          // the transaction
+          if (parsedSales[saleDate] == null) {
+            parsedSales[saleDate] = {};
+          }
+          
+          // If the payment method was cash
+          if (sales[i][inPaymentMethod] == "Cash") {
+            // Cash Sales
+            
+            // If a "Cash Sales" object does not exist in the current date of
+            // sales, create it.
+            if (
+              typeof parsedSales[saleDate][outCashSales] == "undefined" 
+              || (Object.keys(parsedSales[saleDate][outCashSales]).length === 0 && parsedSales[saleDate][outCashSales].constructor === Object)
+            ) {
+              parsedSales[saleDate][outCashSales] = {};
+              parsedSales[saleDate][outCashSales][outC] = 0.0;
+              parsedSales[saleDate][outCashSales][outCd] = 0.0;
+              parsedSales[saleDate][outCashSales][outP] = 0.0;
+              parsedSales[saleDate][outCashSales][outPd] = 0.0;
+              parsedSales[saleDate][outCashSales][outFp] = 0.0;
+              parsedSales[saleDate][outCashSales][outFpt] = 0.0;
+              parsedSales[saleDate][outCashSales][outGc] = 0.0;
+              parsedSales[saleDate][outCashSales][outDeposits] = 0.0;
+              parsedSales[saleDate][outCashSales][outTax] = 0.0;
+              parsedSales[saleDate][outCashSales][outTotal] = 0.0;
+            }
+            
+            // Compare sale item to product/food product/gift card arrays to
+            // categorize the transaction
+            var isProduct = false;
+            var isFoodProduct = false;
+            var isGiftCard = false;
+            
+            if (new RegExp(products.join("|")).test(sales[i][inItemName].toLowerCase())) isProduct = true;
+            else if (new RegExp(foodProducts.join("|")).test(sales[i][inItemName].toLowerCase())) isFoodProduct = true;
+            else if (new RegExp(giftCards.join("|")).test(sales[i][inItemName].toLowerCase())) isGiftCard = true;
+            
+            // Add transaction amounts to output according to the type of sale
+            // item
+            if (isProduct) {
+              parsedSales[saleDate][outCashSales][outP] += saleGross;
+              parsedSales[saleDate][outCashSales][outPd] -= saleDiscountAmount;
+              parsedSales[saleDate][outCashSales][outTax] += saleTax;
+            } else if (isFoodProduct) {
+              parsedSales[saleDate][outCashSales][outFp] += saleGross;
+              parsedSales[saleDate][outCashSales][outFpt] += saleTax;
+              parsedSales[saleDate][outCashSales][outTax] += saleTax;
+            } else if (isGiftCard) {
+              parsedSales[saleDate][outCashSales][outGc] += saleGross;
+            } else {
+              parsedSales[saleDate][outCashSales][outC] += saleGross;
+              parsedSales[saleDate][outCashSales][outCd] -= saleDiscountAmount;
+              parsedSales[saleDate][outCashSales][outTax] += saleTax;
+            }
+            
+            // Save total for comparison with bank deposits
+            parsedSales[saleDate][outCashSales][outTotal] += saleTotal;
+            parsedSales[saleDate][outCashSales][outDeposits] += saleTotal;
+          } else {
+            // Credit Sales
+            
+            // If a "Credit Sales" object does not exist in the current date of
+            // sales, create it.
+            if (
+              typeof parsedSales[saleDate][outCreditSales] == "undefined"
+              || (Object.keys(parsedSales[saleDate][outCreditSales]).length === 0 && parsedSales[saleDate][outCreditSales].constructor === Object)
+            ) {
+              parsedSales[saleDate][outCreditSales] = {};
+              parsedSales[saleDate][outCreditSales][outC] = 0.0;
+              parsedSales[saleDate][outCreditSales][outCd] = 0.0;
+              parsedSales[saleDate][outCreditSales][outP] = 0.0;
+              parsedSales[saleDate][outCreditSales][outPd] = 0.0;
+              parsedSales[saleDate][outCreditSales][outFp] = 0.0;
+              parsedSales[saleDate][outCreditSales][outFpt] = 0.0;
+              parsedSales[saleDate][outCreditSales][outGc] = 0.0;
+              parsedSales[saleDate][outCreditSales][outDeposits] = 0.0;
               parsedSales[saleDate][outCreditSales][outTax] = 0.0;
               parsedSales[saleDate][outCreditSales][outTotal] = 0.0;
             }
@@ -277,26 +427,10 @@
             }
             
             // Save total for comparison with bank deposits
-            parsedSales[saleDate][outCreditSales][outTotal] += saleTotalPaidWPaymentMethod;
+            parsedSales[saleDate][outCreditSales][outTotal] += saleTotal;
+            parsedSales[saleDate][outCreditSales][outDeposits] += saleTotal;
           }
-        }
-        
-        // Iterate through deposit transactions (corresponds to rows in excel 
-        // workbook, sheet "Deposits")
-        for (var i = 0; i < deposits.length; i++) {
-          var depDate = xl2jsDate(deposits[i][inSaleDate]);
-          var depTotal = parseFloat(deposits[i][inTotal]);
-          
-          if (
-            typeof parsedSales[depDate][outDeposits] == "undefined"
-            || (Object.keys(parsedSales[depDate][outDeposits]).length === 0 && parsedSales[depDate][outDeposits].constructor === Object)
-          ) {
-            parsedSales[depDate][outDeposits] = {};
-            parsedSales[depDate][outDeposits][outTotal] = 0.0;
-          }
-          
-          parsedSales[depDate][outDeposits][outTotal] += depTotal;
-        }
+        }*/
         
         console.log(parsedSales);
         return parsedSales;
