@@ -227,7 +227,7 @@
             
             //if (new RegExp(products.join("|")).test(sales[i][inItemName].toLowerCase())) isProduct = true;
             if (new RegExp(foodProducts.join("|")).test(sales[i][inItemName].toLowerCase())) isFoodProduct = true;
-            if (sales[i][inTax] > 0) isProduct = true;
+            if (sales[i][inTax] != 0) isProduct = true;
             else if (new RegExp(giftCards.join("|")).test(sales[i][inItemName].toLowerCase())) isGiftCard = true;
             
             // Add transaction amounts to output according to the type of sale
@@ -280,7 +280,7 @@
 
             //if (new RegExp(products.join("|")).test(sales[i][inItemName].toLowerCase())) isProduct = true;
             if (new RegExp(foodProducts.join("|")).test(sales[i][inItemName].toLowerCase())) isFoodProduct = true;
-            if (sales[i][inTax] > 0) isProduct = true;
+            if (sales[i][inTax] != 0) isProduct = true;
             else if (new RegExp(giftCards.join("|")).test(sales[i][inItemName].toLowerCase())) isGiftCard = true;
             
             // Add transaction amounts to output according to the type of sale
